@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ContactCard from '@/components/ContactCard.vue';
 import InputSearch from '@/components/InputSearch.vue';
 import ContactList from '@/components/ContactList.vue';
 import MainPagination from '@/components/MainPagination.vue';
 import contactsService from '@/services/contacts.service'; // Assuming this service is implemented
+
+import { useMutation } from '@tanstack/vue-query';
 
 // Router and Route instance
 const router = useRouter();
@@ -41,29 +43,45 @@ const filteredContacts = computed(() => {
 });
 
 // Retrieve contacts for the specific page and order by name
-async function retrieveContacts(page) {
-  try {
-    const chunk = await contactsService.fetchContacts(page);
+const { mutate: fetchContacts, isLoading } = useMutation({
+  mutationFn: (page) => contactsService.fetchContacts(page),
+  onSuccess: (chunk) => {
+    console.log(chunk)
     totalPages.value = chunk.metadata.lastPage ?? 1;
     contacts.value = chunk.contacts.sort((a, b) => a.name.localeCompare(b.name));
-    selectedIndex.value = -1; // Reset selected index when new contacts are loaded
-  } catch (error) {
+    selectedIndex.value = -1;
+  },
+  onError: (error) => {
     console.error('Error fetching contacts:', error);
-  }
+  },
+});
+
+
+// Mutation to delete all contacts
+const mutation = useMutation({
+  mutationFn: async () => {
+    await contactsService.deleteAllContacts();
+  },
+  onSuccess: () => {
+    totalPages.value = 1;
+    contacts.value = [];
+    selectedIndex.value = -1;
+    changeCurrentPage(1);
+    console.log('All contacts deleted successfully.');
+  },
+  onError: (error) => {
+    console.error('Error deleting all contacts:', error);
+  },
+});
+
+async function refreshContacts() {
+  await fetchContacts(currentPage.value);
 }
 
 // Handle deleting all contacts
 async function onDeleteContacts() {
   if (confirm('Bạn muốn xóa tất cả Liên hệ?')) {
-    try {
-      await contactsService.deleteAllContacts();
-      totalPages.value = 1;
-      contacts.value = [];
-      selectedIndex.value = -1;
-      changeCurrentPage(1);
-    } catch (error) {
-      console.error('Error deleting all contacts:', error);
-    }
+    mutation.mutate();
   }
 }
 
@@ -84,9 +102,8 @@ watch(searchText, () => {
 
 // Fetch contacts when currentPage changes
 watch(currentPage, () => {
-  retrieveContacts(currentPage.value);
+  fetchContacts(currentPage.value);
 }, { immediate: true });
-
 </script>
 
 <template>
@@ -104,7 +121,7 @@ watch(currentPage, () => {
 
       <!-- Contact List -->
       <ContactList
-        v-if="filteredContacts.length > 0"
+        v-if="!isLoading && filteredContacts.length > 0"
         :contacts="filteredContacts"
         v-model:selected-index="selectedIndex"
       />
@@ -120,7 +137,7 @@ watch(currentPage, () => {
           @update:current-page="changeCurrentPage"
         />
         <div class="w-100"></div>
-        <button class="btn btn-sm btn-primary" @click="retrieveContacts(currentPage)">
+        <button class="btn btn-sm btn-primary" @click="refreshContacts">
           <i class="fas fa-redo"></i> Làm mới
         </button>
         <button class="btn btn-sm btn-success" @click="goToAddContact">

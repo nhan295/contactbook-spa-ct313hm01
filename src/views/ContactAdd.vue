@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import ContactForm from '@/components/ContactForm.vue';
 import contactsService from '@/services/contacts.service';
 
+import { useMutation } from '@tanstack/vue-query';
+
 const contact = ref({
     name: '',
     email: '',
@@ -13,14 +15,20 @@ const contact = ref({
 });
 const message = ref('')
 
-async function addContact(contact) {
-    try {
-        await contactsService.createContact(contact)
+const mutation = useMutation({
+    mutationFn: async (newContact) => {
+        await contactsService.createContact(newContact);
+    },
+    onSuccess: () => {
         message.value = 'Liên hệ được thêm thành công!';
-    }
-    catch {
+    },
+    onError: () => {
         message.value = 'Lỗi khi thêm liên hệ';
-    }
+    },
+});
+
+async function addContact(contact) {
+    await mutation.mutateAsync(contact);
 }
 </script>
 
