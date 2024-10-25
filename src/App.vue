@@ -1,12 +1,19 @@
-<template>
-  <div class="container mt-3">
-    <h2>Hello, Vue.js</h2>
-  </div>
-</template>
+<script setup>
+import AppHeader from '@/components/AppHeader.vue';
+</script>
 
+<template>
+    <AppHeader />
+        
+    <div class="container mt-3">
+        <router-view />
+    </div>
+</template>
 <style>
+
 .page {
-  max-width: 400px;
-  margin: auto;
+    max-width: 400px;
+    margin: auto;
 }
+
 </style>
