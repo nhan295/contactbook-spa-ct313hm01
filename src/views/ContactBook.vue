@@ -140,6 +140,17 @@ watch(currentPage, () => {
           <i class="fas fa-address-card"></i>
         </h4>
         <ContactCard :contact="selectedContact" />
+        <router-link
+          :to="{
+            name: 'contact.edit',
+            params: { id: selectedContact.id },
+          }"
+        >
+          <span class="mt-2 badge text-bg-warning">
+            <i class="fas fa-edit"></i> Hiệu chỉnh
+          </span>
+        </router-link>
+
       </div>
     </div>
   </div>
